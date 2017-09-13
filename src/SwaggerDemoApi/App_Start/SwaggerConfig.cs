@@ -1,12 +1,7 @@
-using System.Collections.Generic;
-using System.Linq;
 using System.Web.Http;
-using System.Web.Http.Description;
 using WebActivatorEx;
 using SwaggerDemoApi;
 using Swashbuckle.Application;
-using Swashbuckle.Swagger;
-using AuthConstants = IdentityServer3.Core.Constants;
 
 [assembly: PreApplicationStartMethod(typeof(SwaggerConfig), "Register")]
 
@@ -16,55 +11,8 @@ namespace SwaggerDemoApi
     {
         public static void Register()
         {
-            var containingAssembly = typeof(SwaggerConfig).Assembly;
+            var thisAssembly = typeof(SwaggerConfig).Assembly;
 
-            GlobalConfiguration.Configuration
-                .EnableSwagger(c =>
-                {
-                    c.SingleApiVersion("v1", "SwaggerDemoApi");
-                    c.IncludeXmlComments($@"{System.AppDomain.CurrentDomain.BaseDirectory}\bin\SwaggerDemoApi.XML");
-                    c.DescribeAllEnumsAsStrings();
-
-                    // You can use "BasicAuth", "ApiKey" or "OAuth2" options to describe security schemes for the API.
-                    // See https://github.com/swagger-api/swagger-spec/blob/master/versions/2.0.md for more details.
-                    // NOTE: These only define the schemes and need to be coupled with a corresponding "security" property
-                    // at the document or operation level to indicate which schemes are required for an operation. To do this,
-                    // you'll need to implement a custom IDocumentFilter and/or IOperationFilter to set these properties
-                    // according to your specific authorization implementation
-                    c.OAuth2("oauth2")
-                        .Description("OAuth2 Implicit Grant")
-                        .Flow("implicit")
-                        .AuthorizationUrl("https://localhost:44333/core/connect/authorize")
-                        .TokenUrl("https://localhost:44333/core/connect/token")
-                        .Scopes(scopes =>
-                        {
-                            scopes.Add("read", "Read access to protected resources");
-                            scopes.Add("write", "Write access to protected resources");
-                        });
-
-                    c.OperationFilter<AssignOAuth2SecurityRequirements>();
-                })
-                .EnableSwaggerUi(c =>
-                {
-                    //c.EnableOAuth2Support("implicitclient", null, "test-realm", "Swagger UI", ",");
-                    c.EnableOAuth2Support("implicitclient", "secret", "test", "Swagger UI");
-
-                    // Use the CustomAsset option to provide your own version of assets used in the swagger-ui.
-                    // It's typically used to instruct Swashbuckle to return your version instead of the default
-                    // when a request is made for "index.html". As with all custom content, the file must be included
-                    // in your project as an "Embedded Resource", and then the resource's "Logical Name" is passed to
-                    // the method as shown below.
-                    //
-                    //c.CustomAsset("index", containingAssembly, "SwaggerDemoApi.SwaggerExtensions.index.html");
-
-                    // Use the "InjectJavaScript" option to invoke one or more custom JavaScripts after the swagger-ui
-                    // has loaded. The file must be included in your project as an "Embedded Resource", and then the resource's
-                    // "Logical Name" is passed to the method as shown above.
-                    //
-                    c.InjectJavaScript(containingAssembly, "SwaggerDemoApi.SwaggerExtensions.fixOAuthScopeSeparator.js");
-                });
-
-            /*
             GlobalConfiguration.Configuration 
                 .EnableSwagger(c =>
                     {
@@ -84,7 +32,7 @@ namespace SwaggerDemoApi
                         // hold additional metadata for an API. Version and title are required but you can also provide
                         // additional fields by chaining methods off SingleApiVersion.
                         //
-                        c.SingleApiVersion("v1", "SwaggerDemoApi");
+                        c.SingleApiVersion("v1", "Sample API");
 
                         // If your API has multiple versions, use "MultipleApiVersions" instead of "SingleApiVersion".
                         // In this case, you must provide a lambda that tells Swashbuckle which actions should be
@@ -155,7 +103,6 @@ namespace SwaggerDemoApi
                         // complex Schema, use a Schema filter.
                         //
                         //c.MapType<ProductType>(() => new Schema { type = "integer", format = "int32" });
-                        //c.MapType<Guid>(() => new Schema { type = "Guid", format = "globally unique identifier" });
                         //
                         // If you want to post-modify "complex" Schemas once they've been generated, across the board or for a
                         // specific type, you can wire up one or more Schema filters.
@@ -179,7 +126,7 @@ namespace SwaggerDemoApi
                         // enum type. Swashbuckle will honor this change out-of-the-box. However, if you use a different
                         // approach to serialize enums as strings, you can also force Swashbuckle to describe them as strings.
                         // 
-                        c.DescribeAllEnumsAsStrings();
+                        //c.DescribeAllEnumsAsStrings();
 
                         // Similar to Schema filters, Swashbuckle also supports Operation and Document filters:
                         //
@@ -206,7 +153,7 @@ namespace SwaggerDemoApi
                         // those comments into the generated docs and UI. You can enable this by providing the path to one or
                         // more Xml comment files.
                         //
-                        c.IncludeXmlComments(GetXmlCommentsPath());
+                        //c.IncludeXmlComments(GetXmlCommentsPath());
 
                         // In contrast to WebApi, Swagger 2.0 does not include the query string component when mapping a URL
                         // to an action. As a result, Swashbuckle will raise an exception if it encounters multiple actions
@@ -267,38 +214,6 @@ namespace SwaggerDemoApi
                         //
                         //c.EnableOAuth2Support("test-client-id", "test-realm", "Swagger UI");
                     });
-             */
-        }
-    }
-
-    public class AssignOAuth2SecurityRequirements : IOperationFilter
-    {
-        public void Apply(Operation operation, SchemaRegistry schemaRegistry, ApiDescription apiDescription)
-        {
-            // Determine if the operation has the Authorize attribute
-            var authorizeAttributes = apiDescription
-                .ActionDescriptor.GetCustomAttributes<AuthorizeAttribute>();
-
-            if (!authorizeAttributes.Any())
-                return;
-
-            // Correspond each "Authorize" role to an oauth2 scope
-            var scopes =
-                authorizeAttributes
-                .SelectMany(attr => attr.Roles.Split(','))
-                .Distinct()
-                .ToList();
-
-            // Initialize the operation.security property if it hasn't already been
-            if (operation.security == null)
-                operation.security = new List<IDictionary<string, IEnumerable<string>>>();
-
-            var oAuthRequirements = new Dictionary<string, IEnumerable<string>>
-                {
-                    { "oauth2", scopes }
-                };
-
-            operation.security.Add(oAuthRequirements);
         }
     }
 }
